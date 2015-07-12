@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js"></script>
+    <script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/1.0.2/Chart.min.js"></script>
+    <script src="synaptic/synaptic.js"></script>
+    <script src="board.js"></script>
+    <script src="plot.js"></script>
+    <style media="screen">
+      #board {
+        width: 100px;
+        height: 137px;
+      }
+      tr .marked {
+        background-color: #000;
+      }
+      #board-json {
+        margin-top: 10px;
+        width: 328px;
+      }
+      .margin {
+        margin-bottom: 10px;
+      }
+      .pull-left {
+        float: left;
+      }
+      #plot-container {
+        margin-left: 20px;
+        width: 1100px;
+        height: 400px;
+      }
+    </style>
+    <script type="text/javascript">
+      var A = '[[0,1,1,1,1,1,1],[1,0,0,1,0,0,0],[1,0,0,1,0,0,0],[1,0,0,1,0,0,0],[0,1,1,1,1,1,1]]';
+      var B = '[[1,1,1,1,1,1,1],[1,0,0,1,0,0,1],[1,0,0,1,0,0,1],[1,0,0,1,0,0,1],[0,1,1,0,1,1,0]]';
+      var C = '[[0,1,1,1,1,1,0],[1,0,0,0,0,0,1],[1,0,0,0,0,0,1],[1,0,0,0,0,0,1],[0,1,0,0,0,1,0]]';
+      var D = '[[1,1,1,1,1,1,1],[1,0,0,0,0,0,1],[1,0,0,0,0,0,1],[1,0,0,0,0,0,1],[0,1,1,1,1,1,0]]';
+      var E = '[[1,1,1,1,1,1,1],[1,0,0,1,0,0,1],[1,0,0,1,0,0,1],[1,0,0,1,0,0,1],[1,0,0,0,0,0,1]]';
+      var F = '[[1,1,1,1,1,1,1],[1,0,0,1,0,0,0],[1,0,0,1,0,0,0],[1,0,0,1,0,0,0],[1,0,0,0,0,0,0]]';
+      var G = '[[0,1,1,1,1,1,0],[1,0,0,0,0,0,1],[1,0,0,0,0,0,1],[1,0,0,0,1,0,1],[0,1,0,0,1,1,0]]';
+      var H = '[[1,1,1,1,1,1,1],[0,0,0,1,0,0,0],[0,0,0,1,0,0,0],[0,0,0,1,0,0,0],[1,1,1,1,1,1,1]]';
+
+      var plot = new Plot();
+      var board = new Board(5, 7);
+      $(function() {
+        $("#board").html(board.draw());
+
+        plot.setup("#plot-container");
+      });
+
+      var tries = 0;
+      var failed = 0;
+      var correct_in_row = 0;
+      var chars = [ ["A", A], ["B", B], ["C", C], ["D", D], ["E", E], ["F", F], ["G", G], ["H", H] ];
+      var last_response = 0;
+      function iterate() {
+        var input = chars[tries%chars.length];
+        var char = input[1];
+        var output = input[0];
+
+        $("#brain-output").val(output);
+        board.board_from_json(char);
+
+        var response = board.response();
+        if (response === output)
+          correct_in_row++;
+        if (response !== output) {
+          failed++;
+          correct_in_row = 0;
+          board.train(output);
+        }
+
+        if (correct_in_row > chars.length*3) {
+          console.log("Fully trained");
+        }
+
+        tries++;
+        var percent = (failed/tries)*100;
+        plot.add_data(percent);
+        console.log(percent);
+      }
+
+      $(function() {
+        _.each(chars, function(char) {
+          $(".buttons-container").append('<button onclick=\'$("#brain-output").val("'+ char[0] + '");board.board_from_json("'+ char[1] + '");\'>'+ char[0] + '</button>');
+        });
+      });
+    </script>
+  </head>
+  <body>
+    <div class="pull-left">
+      <div class="buttons-container"></div>
+      <br/>
+      <button onclick="board.train( $('#brain-output').val() );">Train</button>
+      <button onclick="$('#brain-response').val(board.response());">Activate</button>
+      <br/>
+      <button onclick="iterate();" >Iteration</button>
+
+      <div class="margin"></div>
+
+      <table id="board" border="1"></table>
+
+      <div class="margin"></div>
+
+      <input type="text" id="brain-output"></input>
+      <input type="text" id="brain-response"></input>
+
+      <div class="margin"></div>
+
+      <textarea id="board-json"></textarea>
+      <br/>
+      <button onclick="board.board_from_json($('#board-json').val())">Load form JSON</button>
+    </div>
+    <div class="pull-left">
+      <canvas id="plot-container"></canvas>
+    </div>
+  </body>
+</html>
